@@ -12,11 +12,11 @@ services:
       - key: SMTP_PORT
         value: "465"
       - key: SMTP_USER
-        value: ranjithkumarabba@gmail.com
+        value: your_email@gmail.com
       - key: SMTP_PASS
         sync: false
       - key: SMTP_FROM
-        value: ranjithkumarabba@gmail.com
+        value: your_email@gmail.com
 
   - type: web
     name: securewipe-verifier
