@@ -7,18 +7,16 @@ services:
     rootDir: .
     dockerfilePath: ./Dockerfile
     envVars:
-      - key: PRIVATE_KEY_CONTENT
-        sync: false
       - key: SMTP_HOST
-        sync: false
+        value: smtp.gmail.com
       - key: SMTP_PORT
-        sync: false
+        value: "465"
       - key: SMTP_USER
-        sync: false
+        value: ranjithkumarabba@gmail.com
       - key: SMTP_PASS
         sync: false
       - key: SMTP_FROM
-        sync: false
+        value: ranjithkumarabba@gmail.com
 
   - type: web
     name: securewipe-verifier
@@ -28,5 +26,5 @@ services:
     rootDir: verifier
     dockerfilePath: ./verifier/Dockerfile
     envVars:
-      - key: PUBKEY_CONTENT
+      - key: PUBLIC_KEY
         sync: false
