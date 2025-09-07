@@ -1,8 +1,19 @@
 FROM python:3.11-slim
+
+# Set working directory
 WORKDIR /app
-COPY verifier /app/verifier
-WORKDIR /app/verifier
-RUN pip install --no-cache-dir -r requirements.txt
-ENV FLASK_APP=app
+
+# Copy verifier folder correctly
+COPY . /app
+
+# Install dependencies
+RUN pip install --no-cache-dir -r verifier/requirements.txt
+
+# Set environment variables
+ENV FLASK_APP=verifier/app.py
+
+# Expose port
 EXPOSE 5000
-CMD ["flask","run","--host=0.0.0.0","--port=5000"]
+
+# Run Flask
+CMD ["flask", "run", "--host=0.0.0.0", "--port=5000"]
