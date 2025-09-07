@@ -37,6 +37,27 @@ fn timestamp() -> u64 {
     SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
 }
 
+/// Normalize disk path across OS
+fn normalize_path(raw: &str) -> String {
+    if cfg!(target_os = "windows") {
+        // Windows expects \\.\PhysicalDriveN
+        if raw.starts_with(r"\\.\") {
+            raw.to_string()
+        } else if raw.to_lowercase().starts_with("physicaldrive") {
+            format!(r"\\.\{}", raw)
+        } else {
+            format!(r"\\.\PhysicalDrive{}", raw)
+        }
+    } else {
+        // Linux expects /dev/sdX or /dev/loopX
+        if raw.starts_with("/dev/") {
+            raw.to_string()
+        } else {
+            format!("/dev/{}", raw)
+        }
+    }
+}
+
 async fn index() -> impl Responder {
     HttpResponse::Ok().body("SecureWipe agent. Use the web UI at /static/index.html")
 }
@@ -56,8 +77,15 @@ async fn targets() -> impl Responder {
 async fn start_wipe(req: web::Json<WipeRequest>, data: web::Data<AppState>) -> impl Responder {
     let r = req.into_inner();
     let id = Uuid::new_v4().to_string();
-    let id_clone = id.clone(); // clone for thread
-    let job = JobStatus { id: id.clone(), status: "queued".into(), progress: 0.0, message: "queued".into(), cert_path: None, email_status: None };
+    let id_clone = id.clone();
+    let job = JobStatus {
+        id: id.clone(),
+        status: "queued".into(),
+        progress: 0.0,
+        message: "queued".into(),
+        cert_path: None,
+        email_status: None,
+    };
 
     {
         let mut jobs = data.jobs.lock().unwrap();
@@ -69,19 +97,20 @@ async fn start_wipe(req: web::Json<WipeRequest>, data: web::Data<AppState>) -> i
         info!("Starting wipe job {}", id_clone);
         {
             let mut jobs = state.jobs.lock().unwrap();
-            if let Some(j) = jobs.iter_mut().find(|j| j.id==id_clone) {
+            if let Some(j) = jobs.iter_mut().find(|j| j.id == id_clone) {
                 j.status = "running".into();
                 j.message = "starting".into();
                 j.progress = 0.05;
             }
         }
 
-        // Validate device path
-        let path = r.device_path.clone();
+        // Normalize device path per OS
+        let path = normalize_path(&r.device_path);
         let p = Path::new(&path);
+
         if !p.exists() {
             let mut jobs = state.jobs.lock().unwrap();
-            if let Some(j) = jobs.iter_mut().find(|j| j.id==id_clone) {
+            if let Some(j) = jobs.iter_mut().find(|j| j.id == id_clone) {
                 j.status = "failed".into();
                 j.message = format!("path not found: {}", path);
                 j.progress = 0.0;
@@ -90,10 +119,9 @@ async fn start_wipe(req: web::Json<WipeRequest>, data: web::Data<AppState>) -> i
             return;
         }
 
-        // Wiping logic (unchanged)
-        // ...
+        // (TODO: Insert wiping logic here)
 
-        // Generate hash
+        // Generate hash after wiping
         let mut hasher = Sha256::new();
         if let Ok(mut f2) = File::open(p) {
             let mut buf = [0u8; 65536];
@@ -124,19 +152,23 @@ async fn start_wipe(req: web::Json<WipeRequest>, data: web::Data<AppState>) -> i
 
         // Call Python signing script
         let mut py_cmd = Command::new("python3");
-        py_cmd.arg("/opt/tools/sign_and_send.py").arg("--cert").arg(&cert_path).arg("--email").arg(&r.email);
+        py_cmd.arg("/opt/tools/sign_and_send.py")
+            .arg("--cert").arg(&cert_path)
+            .arg("--email").arg(&r.email);
+
         if let Ok(submit) = std::env::var("VERIFIER_SUBMIT_URL") {
             py_cmd.arg("--submit-url").arg(submit);
         }
+
         let py = py_cmd.output();
         let email_status = match py {
             Ok(o) if o.status.success() => "sent".to_string(),
             Ok(o) => format!("failed: {}", String::from_utf8_lossy(&o.stderr)),
-            Err(e) => format!("error: {}", e)
+            Err(e) => format!("error: {}", e),
         };
 
         let mut jobs = state.jobs.lock().unwrap();
-        if let Some(j) = jobs.iter_mut().find(|j| j.id==id_clone) {
+        if let Some(j) = jobs.iter_mut().find(|j| j.id == id_clone) {
             j.status = "finished".into();
             j.progress = 1.0;
             j.cert_path = Some(cert_path.clone());
@@ -160,7 +192,6 @@ async fn main() -> std::io::Result<()> {
     create_dir_all("./out/certs").ok();
     create_dir_all("./frontend").ok();
 
-    // Ensure frontend index.html exists
     let index_path = "/opt/frontend/index.html";
     if read_to_string(index_path).is_err() {
         write(index_path, "<html><body><h1>SecureWipe Agent</h1></body></html>").ok();
