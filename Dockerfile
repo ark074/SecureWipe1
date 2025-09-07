@@ -26,6 +26,9 @@ COPY --from=builder /usr/src/app/backend/target/release/securewipe_agent /usr/lo
 # Copy Python tools
 COPY tools /opt/tools
 
+# ✅ Copy your frontend (now exists in repo)
+COPY frontend /opt/frontend
+
 WORKDIR /opt/tools
 RUN pip install --no-cache-dir -r requirements.txt
 
