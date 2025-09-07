@@ -1,0 +1,9 @@
+# Example config for on-prem agent
+verifier_submit_url: "https://<your-verifier>/api/submit"
+signing_key_backend: "env" # 'env' reads PRIVATE_KEY_CONTENT; 'file' reads /etc/securewipe/keys/private.pem
+smtp:
+  host: "smtp.example.com"
+  port: 587
+  user: ""
+  pass: ""
+  from: ""
