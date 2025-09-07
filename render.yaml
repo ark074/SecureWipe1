@@ -2,7 +2,7 @@ services:
   - type: web
     name: securewipe
     env: docker
-    plan: starter
+    plan: free
     autoDeploy: true
     rootDir: .
     dockerfilePath: ./Dockerfile
