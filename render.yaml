@@ -24,7 +24,7 @@ services:
     plan: free
     autoDeploy: true
     rootDir: verifier
-    dockerfilePath: ./verifier/Dockerfile
+    dockerfilePath: ./Dockerfile
     envVars:
       - key: PUBLIC_KEY
         sync: false
