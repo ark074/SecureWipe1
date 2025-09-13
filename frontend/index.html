@@ -1,25 +1,150 @@
 <!doctype html>
-<html>
-<head><meta charset="utf-8"><title>SecureWipe UI</title></head>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SecureWipe UI</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f7f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      background: #2c3e50;
+      color: #fff;
+      padding: 15px;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 30px auto;
+      background: #fff;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    label {
+      display: block;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    input[type="text"],
+    input[type="email"],
+    select {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    input[type="checkbox"] {
+      margin-right: 10px;
+    }
+
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      background: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 16px;
+      transition: background 0.3s ease;
+    }
+
+    button:hover {
+      background: #2980b9;
+    }
+
+    pre {
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 6px;
+      margin-top: 20px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
 <body>
-<h1>SecureWipe — Agent UI</h1>
-<label>Target (path or loop device): <input id="target" style="width:60%"/></label><br/>
-<label>Profile: <select id="profile"><option value="quick">Quick</option><option value="secure">Secure</option></select></label><br/>
-<label>Email: <input id="email" style="width:60%"/></label><br/>
-<label><input id="force" type="checkbox"/> Force raw device ops (ATA/NVMe)</label><br/>
-<button id="wipe">Wipe Now</button>
-<pre id="status">idle</pre>
-<pre id="jobs">[]</pre>
-<script>
-async function getJobs(){ const r=await fetch('/jobs'); document.getElementById('jobs').textContent=JSON.stringify(await r.json(),null,2); }
-document.getElementById('wipe').onclick = async ()=>{
-  const payload = { device_path: document.getElementById('target').value, profile: document.getElementById('profile').value, email: document.getElementById('email').value, force: document.getElementById('force').checked };
-  const resp = await fetch('/wipe', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload) });
-  const j = await resp.json();
-  document.getElementById('status').textContent = 'Job queued: '+j.job_id;
-  const iv = setInterval(async ()=>{ const jobs = await (await fetch('/jobs')).json(); const job = jobs.find(x=>x.id===j.job_id); if(job){ document.getElementById('status').textContent = JSON.stringify(job,null,2); if(job.status==='finished'||job.status==='failed'){ clearInterval(iv); } } },2000);
-};
-getJobs();
-</script>
+  <header>
+    <h1>SecureWipe — Agent UI</h1>
+  </header>
+
+  <div class="container">
+    <label for="target">Target (path or loop device):</label>
+    <input id="target" type="text" placeholder="/dev/sdX or /dev/loopX">
+
+    <label for="profile">Profile:</label>
+    <select id="profile">
+      <option value="quick">Quick</option>
+      <option value="secure">Secure</option>
+    </select>
+
+    <label for="email">Email:</label>
+    <input id="email" type="email" placeholder="Enter your email">
+
+    <label>
+      <input id="force" type="checkbox"/> Force raw device ops (ATA/NVMe)
+    </label>
+
+    <button id="wipe">Wipe Now</button>
+
+    <pre id="status">idle</pre>
+    <pre id="jobs">[]</pre>
+  </div>
+
+  <script>
+    async function getJobs() {
+      const r = await fetch('/jobs');
+      document.getElementById('jobs').textContent =
+        JSON.stringify(await r.json(), null, 2);
+    }
+
+    document.getElementById('wipe').onclick = async () => {
+      const payload = {
+        device_path: document.getElementById('target').value,
+        profile: document.getElementById('profile').value,
+        email: document.getElementById('email').value,
+        force: document.getElementById('force').checked
+      };
+
+      const resp = await fetch('/wipe', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(payload)
+      });
+
+      const j = await resp.json();
+      document.getElementById('status').textContent =
+        'Job queued: ' + j.job_id;
+
+      const iv = setInterval(async () => {
+        const jobs = await (await fetch('/jobs')).json();
+        const job = jobs.find(x => x.id === j.job_id);
+        if (job) {
+          document.getElementById('status').textContent =
+            JSON.stringify(job, null, 2);
+          if (job.status === 'finished' || job.status === 'failed') {
+            clearInterval(iv);
+          }
+        }
+      }, 2000);
+    };
+
+    getJobs();
+  </script>
 </body>
 </html>
